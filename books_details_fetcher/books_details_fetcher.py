@@ -4,7 +4,7 @@ import logging
 import json
 
 from aiokafka import AIOKafkaConsumer
-from elasticsearch import AsyncElasticsearch
+from opensearchpy import OpenSearch, AsyncOpenSearch
 
 logging.basicConfig(format='%(asctime)s %(module)s [%(levelname)s]: %(message)s')
 logger = logging.getLogger(__name__)
@@ -12,10 +12,19 @@ logger.setLevel(logging.DEBUG)
 
 DEFAULT_API_ENDPOINT = 'https://api.litres.ru/foundation/api/arts'
 
+auth = ('admin', '**A4d3!m2i1n**')
+
 async def consume():
     print('Before async with')
+
     async with aiohttp.ClientSession() as session:
-        async with AsyncElasticsearch(hosts=["http://elasticsearch:9200"]) as es_client:
+        async with AsyncOpenSearch(
+            hosts=["https://opensearch:9200"],
+            http_auth = auth,
+            use_ssl = False,
+            verify_certs = False,
+            ssl_assert_hostname = False,
+            ssl_show_warn = False ) as es_client:
             print('After async with')
             consumer = AIOKafkaConsumer(
                 'books_overviews',
@@ -31,7 +40,7 @@ async def consume():
                         return
                     book_data = await process_book(book_overview, session)
                     logger.info(f"Processed book: {book_data['title']}, Now putting it to DB")
-                    await es_client.index(index="books", document=book_data)
+                    await es_client.index(index="books", body=book_data)
                     logger.info(f"Book: {book_data['title']} must now be in DB")
             finally:
                 await consumer.stop()
@@ -53,4 +62,16 @@ async def process_book(boook_overview, session: aiohttp.ClientSession):
     return book_clean_info
 
 if __name__ == "__main__":
+
+    simpleclient = OpenSearch(
+        hosts=["https://opensearch:9200"],
+        http_auth = auth,
+        use_ssl = False,
+        verify_certs = False,
+        ssl_assert_hostname = False,
+        ssl_show_warn = False
+    )
+    if not simpleclient.indices.exists(index="book"):
+        response = simpleclient.indices.create("book")
+
     asyncio.run(consume())
