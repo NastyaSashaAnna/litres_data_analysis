@@ -59,8 +59,8 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    environment:
-      - LITRES_BOOKS_COUNT_LIMIT=1000
+    # environment:
+    #   - LITRES_BOOKS_COUNT_LIMIT=1000
 
   books_details_fetcher:
     image: books_details_fetcher_image
