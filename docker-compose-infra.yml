@@ -1,0 +1,21 @@
+version: '3'
+services:
+  elasticsearch:
+    image: evgenius8888/test_elastic:tag1
+    environment:
+      - discovery.type=single-node
+    volumes:
+        - ./Elasticsearch/data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail elasticsearch:9200/_cluster/health?wait_for_status=yellow&timeout=50s || exit 1"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+
+  kibana:
+    image: evgenius8888/test_kibana:tag1
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    ports:
+      - "5601:5601"
